@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --rt-blue: #31AFEA;
+  --rt-navy: #102E46;
+  --rt-dark: #071B2B;
+  --rt-purple: #AC72E5;
+  --rt-bg: #EAF0F2;
+  --rt-border: #D1DCE3;
+  --rt-text: #1a2e3d;
+  --rt-muted: #5a7a8a;
+  --sidebar-width: 250px;
+}
+
+* { box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--rt-bg); color: var(--rt-text); }
+
+/* Flatpickr dark override */
+.flatpickr-calendar { font-size: 13px; }
