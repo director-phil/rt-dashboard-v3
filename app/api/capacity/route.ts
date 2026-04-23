@@ -92,12 +92,16 @@ export async function GET(req: NextRequest) {
       modifiedBefore: toISO,
     });
 
-    // appointmentId → technicianName
-    const apptToTech = new Map<string, string>();
+    // appointmentId → technicianName[] (all assigned techs, not just the last one)
+    const apptToTechs = new Map<string, string[]>();
     for (const a of assignments) {
       if (a.status === "Dismissed") continue;
       const techName = ((a.technicianName as string) || "").trim();
-      if (techName) apptToTech.set(String(a.appointmentId), techName);
+      if (!techName) continue;
+      const apptId = String(a.appointmentId);
+      const existing = apptToTechs.get(apptId) || [];
+      if (!existing.includes(techName)) existing.push(techName);
+      apptToTechs.set(apptId, existing);
     }
 
     // 3. Batch fetch jobs for the unique job IDs
@@ -131,7 +135,7 @@ export async function GET(req: NextRequest) {
 
     for (const appt of appointments) {
       const apptId = String(appt.id);
-      const techName = apptToTech.get(apptId) || "Unassigned";
+      const techNames = apptToTechs.get(apptId) || ["Unassigned"];
       const status = (appt.status as string) || "Scheduled";
 
       const startStr = (appt.start as string) || "";
@@ -151,12 +155,14 @@ export async function GET(req: NextRequest) {
       const jobValue = (job.total as number) || 0;
       const jobStatus = status || (job.jobStatus as string) || "Scheduled";
 
-      if (!techSchedule[techName]) {
-        techSchedule[techName] = { name: techName, jobs: [], totalValue: 0, scheduledHours: 0 };
+      for (const techName of techNames) {
+        if (!techSchedule[techName]) {
+          techSchedule[techName] = { name: techName, jobs: [], totalValue: 0, scheduledHours: 0 };
+        }
+        techSchedule[techName].jobs.push({ id: apptId, jobNumber, time: timeStr, type: jobType, trade, status: jobStatus, value: jobValue, durationHours });
+        techSchedule[techName].totalValue += jobValue;
+        techSchedule[techName].scheduledHours += durationHours;
       }
-      techSchedule[techName].jobs.push({ id: apptId, jobNumber, time: timeStr, type: jobType, trade, status: jobStatus, value: jobValue, durationHours });
-      techSchedule[techName].totalValue += jobValue;
-      techSchedule[techName].scheduledHours += durationHours;
     }
 
     const techs = Object.values(techSchedule).sort((a, b) => {
